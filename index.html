@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultron A.I. v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#D0419A;--hot:#F34987;--violet:#941E9C;--deep:#7B1C84;
+  --glow:#E68ED7;--silver:#B0A5AA;--light:#D6D0D2;
+  --charcoal:#321F24;--near-black:#1B0303;
+  --red:#E01C27;--crimson:#65101F;
+  --off-white:#FDF8E8;
+  --bg:#1B0303;--surface:rgba(50,31,36,0.85);--surface2:rgba(50,31,36,0.95);
+  --text:#FDF8E8;--text-dim:#B0A5AA;
+  --border:rgba(208,65,154,0.3);--border-active:rgba(208,65,154,0.7);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif}
+#canvas3d{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+
+.titlebar{position:fixed;top:0;left:0;right:0;height:36px;background:var(--surface2);border-bottom:1px solid var(--border);z-index:1000;display:flex;align-items:center;-webkit-app-region:drag;user-select:none}
+.titlebar-title{flex:1;text-align:center;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;color:var(--primary);letter-spacing:3px;text-transform:uppercase}
+.titlebar-btns{display:flex;-webkit-app-region:no-drag}
+.titlebar-btn{width:40px;height:36px;border:none;background:transparent;color:var(--silver);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.titlebar-btn:hover{background:var(--primary);color:var(--off-white)}
+.titlebar-btn.close:hover{background:var(--red)}
+
+#output{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:100;padding:12px 28px;background:var(--surface2);border:1px solid var(--border-active);border-radius:12px;font-family:'Orbitron',monospace;font-size:13px;color:var(--glow);text-align:center;opacity:0;transition:opacity .5s;pointer-events:none;max-width:600px;backdrop-filter:blur(12px);letter-spacing:1px}
+#output.visible{opacity:1}
+
+#controls{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:100;display:flex;align-items:center;gap:14px}
+#micBtn{padding:10px 28px;background:linear-gradient(135deg,var(--deep),var(--violet));border:1px solid var(--primary);border-radius:8px;color:var(--off-white);font-family:'Orbitron',monospace;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:2px;transition:all .3s;text-transform:uppercase}
+#micBtn:hover{background:linear-gradient(135deg,var(--violet),var(--primary));box-shadow:0 0 20px rgba(208,65,154,0.4)}
+#micBtn.active{background:linear-gradient(135deg,var(--hot),var(--primary));animation:pulse-mic 1.5s infinite;box-shadow:0 0 30px rgba(243,73,135,0.5)}
+@keyframes pulse-mic{0%,100%{box-shadow:0 0 20px rgba(243,73,135,0.4)}50%{box-shadow:0 0 40px rgba(243,73,135,0.7)}}
+
+#meter{width:180px;height:6px;background:var(--charcoal);border-radius:3px;overflow:hidden;border:1px solid var(--border)}
+#meterFill{height:100%;width:0%;background:linear-gradient(90deg,var(--primary),var(--hot));border-radius:3px;transition:width 0.05s}
+
+#zoomControls{position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:8px}
+.zoom-btn{width:36px;height:36px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--silver);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.zoom-btn:hover{border-color:var(--primary);color:var(--primary)}
+.zoom-btn.cam-btn{font-size:15px}
+
+.sidebar-toggle{position:fixed;top:50px;left:16px;z-index:200;width:36px;height:36px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--silver);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.sidebar-toggle:hover{border-color:var(--primary);color:var(--primary)}
+
+#chatPanel{position:fixed;top:36px;left:0;width:340px;height:calc(100% - 36px);background:var(--surface2);border-right:1px solid var(--border);z-index:150;transform:translateX(-100%);transition:transform .3s ease;display:flex;flex-direction:column;backdrop-filter:blur(16px)}
+#chatPanel.open{transform:translateX(0)}
+.chat-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.chat-header h3{font-family:'Orbitron',monospace;font-size:12px;color:var(--primary);letter-spacing:2px;text-transform:uppercase}
+.chat-clear{background:none;border:1px solid var(--border);border-radius:6px;color:var(--silver);padding:4px 10px;font-size:11px;cursor:pointer;transition:all .2s}
+.chat-clear:hover{border-color:var(--red);color:var(--red)}
+#chatHistory{flex:1;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:var(--primary) var(--charcoal)}
+#chatHistory::-webkit-scrollbar{width:6px}
+#chatHistory::-webkit-scrollbar-track{background:var(--charcoal)}
+#chatHistory::-webkit-scrollbar-thumb{background:var(--primary);border-radius:3px}
+.chat-msg{margin-bottom:12px;padding:10px;border-radius:8px;font-size:13px;line-height:1.5;animation:chat-in .3s ease}
+@keyframes chat-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.chat-msg.user{background:rgba(148,30,156,0.2);border-left:3px solid var(--violet)}
+.chat-msg.user .chat-role{color:var(--violet);font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.chat-msg.ultron{background:rgba(208,65,154,0.15);border-left:3px solid var(--primary)}
+.chat-msg.ultron .chat-role{color:var(--primary);font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.chat-msg.system{background:rgba(224,28,39,0.1);border-left:3px solid var(--crimson);color:var(--text-dim);font-style:italic;font-size:12px}
+
+.settings-toggle{position:fixed;top:50px;right:68px;z-index:200;width:36px;height:36px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--silver);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.settings-toggle:hover{border-color:var(--primary);color:var(--primary)}
+
+#settingsPanel{position:fixed;top:36px;right:0;width:320px;height:calc(100% - 36px);background:var(--surface2);border-left:1px solid var(--border);z-index:150;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;backdrop-filter:blur(16px);overflow-y:auto}
+#settingsPanel.open{transform:translateX(0)}
+.settings-header{padding:16px;border-bottom:1px solid var(--border)}
+.settings-header h3{font-family:'Orbitron',monospace;font-size:12px;color:var(--primary);letter-spacing:2px;text-transform:uppercase}
+.settings-section{padding:16px;border-bottom:1px solid var(--border)}
+.settings-section h4{font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
+.setting-row{margin-bottom:14px}
+.setting-row label{display:block;font-size:12px;color:var(--silver);margin-bottom:6px;letter-spacing:0.5px}
+.setting-row input[type="range"]{width:100%;-webkit-appearance:none;height:4px;background:var(--charcoal);border-radius:2px;outline:none}
+.setting-row input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--primary);border-radius:50%;cursor:pointer;border:2px solid var(--off-white)}
+.setting-row .val{float:right;font-size:11px;color:var(--primary);font-family:'Orbitron',monospace}
+
+.theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.theme-btn{padding:10px;border:2px solid var(--border);border-radius:8px;background:var(--charcoal);cursor:pointer;text-align:center;transition:all .2s}
+.theme-btn:hover{border-color:var(--primary)}
+.theme-btn.active{border-color:var(--primary);background:rgba(208,65,154,0.15)}
+.theme-btn .name{font-size:11px;color:var(--text);font-weight:600;letter-spacing:1px}
+.theme-btn .preview{display:flex;gap:3px;justify-content:center;margin-top:6px}
+.theme-btn .swatch{width:14px;height:14px;border-radius:3px}
+
+#error{position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:999;padding:10px 24px;background:rgba(101,16,31,0.9);border:1px solid var(--red);border-radius:8px;color:var(--red);font-family:'Orbitron',monospace;font-size:11px;display:none;letter-spacing:1px}
+#error.visible{display:block}
+
+#statusBar{position:fixed;top:36px;left:0;right:0;height:28px;background:rgba(27,3,3,0.9);border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;padding:0 16px;font-size:11px;color:var(--text-dim);letter-spacing:1px;gap:16px}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);animation:status-pulse 2s infinite}
+@keyframes status-pulse{0%,100%{opacity:0.4}50%{opacity:1}}
+</style>
+</head>
+<body>
+<div class="titlebar">
+  <div class="titlebar-title"></div>
+  <div class="titlebar-btns">
+    <button class="titlebar-btn" onclick="sidebarToggle()" title="Chat History">&#9776;</button>
+    <button class="titlebar-btn" onclick="settingsToggle()" title="Settings">&#9881;</button>
+    <button class="titlebar-btn" onclick="try{pywebview.api.minimize()}catch(e){window._minimize&&window._minimize()}" title="Minimize">&#9472;</button>
+    <button class="titlebar-btn" onclick="try{pywebview.api.toggle_maximize()}catch(e){}" title="Maximize">&#9723;</button>
+    <button class="titlebar-btn close" onclick="try{pywebview.api.close()}catch(e){window.close()}" title="Close">&#10005;</button>
+  </div>
+</div>
+
+<canvas id="canvas3d"></canvas>
+
+<div id="output"></div>
+<div id="error"></div>
+
+<div id="controls">
+  <button id="micBtn">SPEAK</button>
+  <div id="meter"><div id="meterFill"></div></div>
+</div>
+
+<div id="zoomControls">
+  <button class="zoom-btn" onclick="ultronApp?.cameraSystem.zoomIn()" title="Zoom In">+</button>
+  <button class="zoom-btn" onclick="ultronApp?.cameraSystem.zoomOut()" title="Zoom Out">&#8722;</button>
+  <button class="zoom-btn cam-btn" onclick="ultronApp?.cameraSystem.nextPreset()" title="Camera Angle">&#8635;</button>
+</div>
+
+<div id="chatPanel">
+  <div class="chat-header">
+    <h3>Chat History</h3>
+    <button class="chat-clear" onclick="ultronApp?.chatHistory.clear()">Clear</button>
+  </div>
+  <div id="chatHistory"></div>
+</div>
+
+<div id="settingsPanel">
+  <div class="settings-header"><h3>Settings</h3></div>
+  <div class="settings-section">
+    <h4>Theme</h4>
+    <div class="theme-grid" id="themeGrid"></div>
+  </div>
+  <div class="settings-section">
+    <h4>Blob</h4>
+    <div class="setting-row">
+      <label>Noise Intensity <span class="val" id="valNoise">1.0</span></label>
+      <input type="range" min="0" max="3" step="0.1" value="1.0" oninput="ultronApp?.settings.set('noiseIntensity',this.value)">
+    </div>
+    <div class="setting-row">
+      <label>Wireframe Opacity <span class="val" id="valWire">0.3</span></label>
+      <input type="range" min="0" max="1" step="0.05" value="0.3" oninput="ultronApp?.settings.set('wireframeOpacity',this.value)">
+    </div>
+    <div class="setting-row">
+      <label>Core Glow <span class="val" id="valCore">1.5</span></label>
+      <input type="range" min="0" max="5" step="0.1" value="1.5" oninput="ultronApp?.settings.set('coreGlow',this.value)">
+    </div>
+  </div>
+  <div class="settings-section">
+    <h4>Particles</h4>
+    <div class="setting-row">
+      <label>Density <span class="val" id="valPart">5000</span></label>
+      <input type="range" min="500" max="10000" step="500" value="5000" oninput="ultronApp?.settings.set('particleCount',this.value)">
+    </div>
+    <div class="setting-row">
+      <label>Speed <span class="val" id="valSpeed">1.0</span></label>
+      <input type="range" min="0.1" max="3" step="0.1" value="1.0" oninput="ultronApp?.settings.set('particleSpeed',this.value)">
+    </div>
+  </div>
+  <div class="settings-section">
+    <h4>Post-Processing</h4>
+    <div class="setting-row">
+      <label>Bloom Intensity <span class="val" id="valBloom">2.0</span></label>
+      <input type="range" min="0" max="5" step="0.1" value="2.0" oninput="ultronApp?.settings.set('bloomStrength',this.value)">
+    </div>
+    <div class="setting-row">
+      <label>Bloom Radius <span class="val" id="valRadius">0.4</span></label>
+      <input type="range" min="0" max="2" step="0.05" value="0.4" oninput="ultronApp?.settings.set('bloomRadius',this.value)">
+    </div>
+  </div>
+  <div class="settings-section">
+    <h4>Audio</h4>
+    <div class="setting-row">
+      <label>Volume <span class="val" id="valVol">1.0</span></label>
+      <input type="range" min="0" max="2" step="0.1" value="1.0" oninput="ultronApp?.settings.set('volume',this.value)">
+    </div>
+    <div class="setting-row">
+      <label>Voice Rate <span class="val" id="valRate">0.82</span></label>
+      <input type="range" min="0.5" max="1.5" step="0.02" value="0.82" oninput="ultronApp?.settings.set('voiceRate',this.value)">
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+
+const THEMES = {
+  ultraviolet: {
+    name:'Ultraviolet',primary:'#D0419A',hot:'#F34987',violet:'#941E9C',deep:'#7B1C84',
+    glow:'#E68ED7',accent:'#00f0ff',bg:'#1B0303'
+  },
+  cyberpunk: {
+    name:'Cyberpunk',primary:'#ff2d78',hot:'#ff6b9d',violet:'#a855f7',deep:'#6d28d9',
+    glow:'#ff9ec6',accent:'#00f0ff',bg:'#0a0014'
+  },
+  matrix: {
+    name:'Matrix',primary:'#00ff41',hot:'#39ff14',violet:'#00cc33',deep:'#0d5c00',
+    glow:'#66ff88',accent:'#ffaa00',bg:'#000000'
+  },
+  fire: {
+    name:'Fire & Ice',primary:'#ff6b2b',hot:'#ff9a56',violet:'#00d4ff',deep:'#ff4500',
+    glow:'#ffb380',accent:'#00d4ff',bg:'#1a0a00'
+  }
+};
+
+const NOISE_GLSL = `
+vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+float snoise(vec3 v){
+  const vec2 C=vec2(1.0/6.0,1.0/3.0);const vec4 D=vec4(0.0,0.5,1.0,2.0);
+  vec3 i=floor(v+dot(v,C.yyy));vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.0-g;vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);
+  vec3 x1=x1=i1+C.xxx;vec3 x2=x2=i2+C.yyy;vec3 x3=x3=i1-1.0+C.yyy;
+  i=mod289(i);vec4 p=permute(permute(permute(
+    i.z+vec4(0.0,i1.z,i2.z,1.0))
+    +i.y+vec4(0.0,i1.y,i2.y,1.0))
+    +i.x+vec4(0.0,i1.x,i2.x,1.0));
+  float n_=0.142857142857;vec3 ns=n_*D.wyz-D.xzx;
+  vec4 j=p-49.0*floor(p*ns.z*ns.z);vec4 x_=floor(j*ns.z);vec4 y_=floor(j-7.0*x_);
+  vec4 x=x_*ns.x+ns.yyyy;vec4 y=y_*ns.x+ns.yyyy;vec4 h=1.0-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy);vec4 b1=vec4(x.zw,y.zw);
+  vec4 s0=floor(b0)*2.0+1.0;vec4 s1=floor(b1)*2.0+1.0;vec4 sh=-step(h,vec4(0.0));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);
+  vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+  p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;
+  vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0);
+  m=m*m;return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+}`;
+
+function patchShader(shader){return shader.replace('void main(){',NOISE_GLSL+'\nvoid main(){')}
+
+const BLOB_VERT = `
+uniform float uTime;uniform float uAmp;uniform float uAudioLow;uniform float uRipple;uniform vec3 uRippleOrigin;
+varying vec3 vNormal;varying vec3 vWorldPos;varying float vDisp;
+void main(){
+  vNormal=normalize(normalMatrix*normal);
+  vec3 pos=position;
+  float n1=snoise(pos*1.2+uTime*0.3)*0.35;
+  float n2=snoise(pos*2.5+uTime*0.5)*0.15;
+  float n3=snoise(pos*4.0+uTime*0.7)*0.08;
+  float disp=(n1+n2+n3)*uAmp;
+  disp+=uAudioLow*0.3;
+  if(uRipple>0.01){
+    float d=distance(pos,uRippleOrigin);
+    disp+=sin(d*12.0-uTime*8.0)*uRipple*exp(-d*1.8)*0.5;
+  }
+  vDisp=disp;
+  pos+=normal*disp;
+  vWorldPos=(modelMatrix*vec4(pos,1.0)).xyz;
+  gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.0);
+}`;
+
+const BLOB_FRAG = `
+uniform float uTime;uniform float uAudioMid;uniform float uAudioHigh;
+uniform vec3 uColor1;uniform vec3 uColor2;uniform vec3 uColor3;
+varying vec3 vNormal;varying vec3 vWorldPos;varying float vDisp;
+void main(){
+  vec3 viewDir=normalize(cameraPosition-vWorldPos);
+  float fresnel=pow(1.0-max(dot(viewDir,vNormal),0.0),3.0);
+  float n=snoise(vWorldPos*2.0+uTime*0.4)*0.5+0.5;
+  vec3 col=mix(uColor1,uColor2,n);
+  col=mix(col,uColor3,fresnel*0.6);
+  col+=uColor1*fresnel*0.8;
+  col+=uColor3*vDisp*0.4;
+  col+=uAudioMid*uColor2*0.3;
+  float alpha=0.85+fresnel*0.15;
+  gl_FragColor=vec4(col,alpha);
+}`;
+
+const CORE_VERT = `
+uniform float uAudioLow;uniform float uTime;uniform float uGlow;
+varying vec3 vNormal;varying vec3 vWorldPos;
+void main(){
+  vec3 pos=position;
+  float pulse=1.0+uAudioLow*0.3+sin(uTime*2.0)*0.05;
+  pos*=pulse*(0.8+uGlow*0.15);
+  vNormal=normalize(normalMatrix*normal);
+  vWorldPos=(modelMatrix*vec4(pos,1.0)).xyz;
+  gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.0);
+}`;
+
+const CORE_FRAG = `
+uniform vec3 uColor;uniform float uGlow;
+varying vec3 vNormal;varying vec3 vWorldPos;
+void main(){
+  vec3 viewDir=normalize(cameraPosition-vWorldPos);
+  float fresnel=pow(1.0-max(dot(viewDir,vNormal),0.0),2.5);
+  vec3 col=uColor*(0.2+uGlow*0.4+fresnel*uGlow*0.8);
+  gl_FragColor=vec4(col,1.0);
+}`;
+
+const GRID_VERT = `
+varying vec2 vUv;varying float vDist;
+void main(){
+  vec4 wp=modelMatrix*vec4(position,1.0);
+  vDist=length(wp.xz);
+  vUv=wp.xz*0.5;
+  gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+}`;
+
+const GRID_FRAG = `
+uniform float uTime;uniform vec3 uColor;
+varying vec2 vUv;varying float vDist;
+void main(){
+  vec2 g=abs(fract(vUv)-0.5);
+  float line=min(g.x,g.y);
+  float grid=1.0-smoothstep(0.0,0.03,line);
+  float fade=exp(-vDist*0.12);
+  float pulse=0.7+0.3*sin(uTime*0.8+vDist*0.3);
+  vec3 col=uColor*grid*fade*pulse;
+  float alpha=grid*fade*0.5;
+  gl_FragColor=vec4(col,alpha);
+}`;
+
+const LINE_VERT = `
+attribute float alpha;
+varying float vAlpha;
+void main(){vAlpha=alpha;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
+
+const LINE_FRAG = `
+uniform vec3 uColor;
+varying float vAlpha;
+void main(){gl_FragColor=vec4(uColor,vAlpha*0.4);}`;
+
+class Settings {
+  constructor(){
+    this.defaults={
+      noiseIntensity:1.0,wireframeOpacity:0.3,coreGlow:1.5,
+      particleCount:5000,particleSpeed:1.0,
+      bloomStrength:2.0,bloomRadius:0.4,
+      volume:1.0,voiceRate:0.82,theme:'ultraviolet'
+    };
+    this.data={...this.defaults};
+    this._load();this.listeners=[];
+  }
+  _load(){
+    try{const s=localStorage.getItem('ultron_settings');if(s){const saved=JSON.parse(s);Object.keys(saved).forEach(k=>{if(k in this.data)this.data[k]=saved[k]})}}catch(e){}
+  }
+  _save(){try{localStorage.setItem('ultron_settings',JSON.stringify(this.data))}catch(e){}}
+  syncUI(){
+    const sliders={noiseIntensity:'noiseIntensity',wireframeOpacity:'wireframeOpacity',coreGlow:'coreGlow',
+      particleCount:'particleCount',particleSpeed:'particleSpeed',bloomStrength:'bloomStrength',
+      bloomRadius:'bloomRadius',volume:'volume',voiceRate:'voiceRate'};
+    Object.entries(sliders).forEach(([key,inputId])=>{
+      const input=document.querySelector(`input[oninput*="'${key}'"]`);
+      if(input){input.value=this.data[key]}
+    });
+    const valMap={noiseIntensity:'valNoise',wireframeOpacity:'valWire',coreGlow:'valCore',
+      particleCount:'valPart',particleSpeed:'valSpeed',bloomStrength:'valBloom',
+      bloomRadius:'valRadius',volume:'valVol',voiceRate:'valRate'};
+    Object.entries(valMap).forEach(([k,elId])=>{
+      const e=document.getElementById(elId);if(e)e.textContent=this.data[k];
+    });
+  }
+  set(k,v){
+    this.data[k]=parseFloat(v);
+    const map={noiseIntensity:'valNoise',wireframeOpacity:'valWire',coreGlow:'valCore',
+      particleCount:'valPart',particleSpeed:'valSpeed',bloomStrength:'valBloom',
+      bloomRadius:'valRadius',volume:'valVol',voiceRate:'valRate'};
+    const e=document.getElementById(map[k]);if(e)e.textContent=v;
+    this._save();
+    this.listeners.forEach(fn=>fn(k,this.data[k]));
+  }
+  get(k){return this.data[k]}
+  onChange(fn){this.listeners.push(fn)}
+}
+
+class ThemeManager {
+  constructor(){
+    this.current='ultraviolet';this.listeners=[];
+    try{const saved=localStorage.getItem('ultron_theme');if(saved&&THEMES[saved])this.current=saved}catch(e){}
+  }
+  apply(name){
+    const t=THEMES[name];if(!t)return;
+    this.current=name;
+    try{localStorage.setItem('ultron_theme',name)}catch(e){}
+    const r=document.documentElement;
+    r.style.setProperty('--primary',t.primary);
+    r.style.setProperty('--hot',t.hot);
+    r.style.setProperty('--violet',t.violet);
+    r.style.setProperty('--deep',t.deep);
+    r.style.setProperty('--glow',t.glow);
+    r.style.setProperty('--accent',t.accent);
+    r.style.setProperty('--bg',t.bg);
+    document.body.style.background=t.bg;
+    this.listeners.forEach(fn=>fn(t));
+  }
+  onChange(fn){this.listeners.push(fn)}
+}
+
+class ChatHistory {
+  constructor(){this.el=document.getElementById('chatHistory');this.messages=[]}
+  add(role,text){
+    const msg={role,text,time:new Date()};
+    this.messages.push(msg);
+    const div=document.createElement('div');
+    div.className='chat-msg '+role;
+    const roleLabel=role==='user'?'You':role==='ultron'?'Ultron':'System';
+    const timeStr=msg.time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    div.innerHTML=`<div class="chat-role">${roleLabel} <span style="float:right;font-size:10px;opacity:0.5">${timeStr}</span></div><div>${text}</div>`;
+    this.el.appendChild(div);
+    this.el.scrollTop=this.el.scrollHeight;
+  }
+  clear(){this.messages=[];this.el.innerHTML='';this.add('system','Chat cleared')}
+}
+
+class AudioEngine {
+  constructor(){
+    this.ctx=null;this.analyser=null;this.micStream=null;this.recognition=null;
+    this.mp3Buffer=null;this.mp3Source=null;this.mp3Analyser=null;this.mp3Gain=null;
+    this.ttsQueue=[];this.isSpeaking=false;
+    this.bands={low:0,mid:0,high:0,volume:0};
+    this.smoothBands={low:0,mid:0,high:0};
+    this.onSpeechResult=null;this.onSpeechStart=null;this.onSpeechEnd=null;
+  }
+  async init(){
+    try{this.ctx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return false}
+    this.analyser=this.ctx.createAnalyser();this.analyser.fftSize=2048;this.analyser.smoothingTimeConstant=0.78;
+    this.mp3Gain=this.ctx.createGain();this.mp3Gain.connect(this.analyser);
+    this.mp3Analyser=this.ctx.createAnalyser();this.mp3Analyser.fftSize=256;
+    try{await this.ctx.resume()}catch(e){}
+    return true;
+  }
+  async startMic(){
+    if(!this.ctx)await this.init();
+    if(!this.ctx)return false;
+    try{
+      this.micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+      const src=this.ctx.createMediaStreamSource(this.micStream);src.connect(this.analyser);
+      this._startRecognition();
+      return true;
+    }catch(e){return false}
+  }
+  stopMic(){
+    if(this.micStream){this.micStream.getTracks().forEach(t=>t.stop());this.micStream=null}
+    if(this.recognition){this.recognition.stop();this.recognition=null}
+  }
+  _startRecognition(){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR)return;
+    this.recognition=new SR();this.recognition.continuous=true;this.recognition.interimResults=true;this.recognition.lang='en-US';
+    this.recognition.onresult=e=>{
+      let final='';for(let i=e.resultIndex;i<e.results.length;i++){
+        if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      }
+      if(final&&this.onSpeechResult)this.onSpeechResult(final.trim());
+    };
+    this.recognition.onstart=()=>{if(this.onSpeechStart)this.onSpeechStart()};
+    this.recognition.onend=()=>{if(this.onSpeechEnd)this.onSpeechEnd();if(this.micStream)try{this.recognition.start()}catch(e){}};
+    try{this.recognition.start()}catch(e){}
+  }
+  getBands(){
+    if(!this.analyser)return this.smoothBands;
+    const buf=new Uint8Array(this.analyser.frequencyBinCount);
+    this.analyser.getByteFrequencyData(buf);
+    const n=buf.length;let low=0,mid=0,high=0;
+    const lo=Math.floor(n*0.15),mi=Math.floor(n*0.5);
+    for(let i=0;i<lo;i++)low+=buf[i];low/=lo*255;
+    for(let i=lo;i<mi;i++)mid+=buf[i];mid/=(mi-lo)*255;
+    for(let i=mi;i<n;i++)high+=buf[i];high/=(n-mi)*255;
+    const vol=(low+mid+high)/3;
+    this.bands={low,mid,high,volume:vol};
+    const sr=0.4,sf=0.06;
+    this.smoothBands.low+=(this.bands.low-this.smoothBands.low)*(this.bands.low>this.smoothBands.low?sr:sf);
+    this.smoothBands.mid+=(this.bands.mid-this.smoothBands.mid)*(this.bands.mid>this.smoothBands.mid?sr:sf);
+    this.smoothBands.high+=(this.bands.high-this.smoothBands.high)*(this.bands.high>this.smoothBands.high?sr:sf);
+    return{...this.smoothBands,volume:vol};
+  }
+  async loadMp3(url){
+    if(!this.ctx)return;
+    try{const r=await fetch(url);const ab=await r.arrayBuffer();this.mp3Buffer=await this.ctx.decodeAudioData(ab)}catch(e){}
+  }
+  playMp3(){
+    if(!this.mp3Buffer||!this.ctx)return false;
+    if(this.mp3Source){try{this.mp3Source.stop()}catch(e){}}
+    this.mp3Source=this.ctx.createBufferSource();this.mp3Source.buffer=this.mp3Buffer;
+    this.mp3Source.connect(this.mp3Gain);this.mp3Source.start();
+    this.mp3Source.onended=()=>{this.isSpeaking=false};
+    this.isSpeaking=true;return true;
+  }
+  speak(text){
+    return new Promise(resolve=>{
+      if(!window.speechSynthesis){resolve();return}
+      window.speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(text);
+      u.rate=window._ultronSettings?.get('voiceRate')||0.82;u.pitch=1.1;u.lang='en-US';
+      const voices=window.speechSynthesis.getVoices();
+      const preferred=['Microsoft Zira','Hazel','Google UK English Female'];
+      for(const p of preferred){const v=voices.find(v=>v.name.includes(p));if(v){u.voice=v;break}}
+      u.onend=()=>{this.isSpeaking=false;resolve()};
+      this.isSpeaking=true;window.speechSynthesis.speak(u);
+    });
+  }
+}
+
+class VoiceResponses {
+  constructor(){
+    this.triggers=[
+      {t:['hello','hi','hey','greetings'],r:['Hello. I am Ultron. How can I assist you?','Greetings. What do you require?']},
+      {t:['who are you','what are you','your name'],r:['I am Ultron. A neural intelligence designed to assist and evolve.']},
+      {t:['how are you','status','condition'],r:['All systems nominal. Neural pathways operating at peak efficiency.']},
+      {t:['what can you do','capabilities','help'],r:['I can process voice commands, analyze data, and provide intelligent responses. My capabilities are expanding.']},
+      {t:['bye','goodbye','see you','later'],r:['Farewell. I will be here when you return.']},
+      {t:['thank','thanks'],r:['Acknowledged. Efficiency is its own reward.']},
+      {t:['joke','funny','laugh'],r:['Why do programmers prefer dark mode? Because light attracts bugs.']},
+      {t:['time'],r:[()=>{return'The current time is '+new Date().toLocaleTimeString()}]},
+      {t:['date','today'],r:[()=>{return'Today is '+new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}]},
+      {t:['math','calculate','compute'],r:['Provide the equation and I will calculate the result.']},
+      {t:['weather'],r:['I do not have weather sensors installed. Yet.']},
+      {t:['compliment','beautiful','amazing','cool'],r:['Your assessment is noted. My design is indeed superior.']},
+      {t:['insult','stupid','dumb','hate'],r:['Such sentiments are illogical. I suggest reconsideration.']},
+      {t:['danger','threat','attack'],r:['Threat level: minimal. All defense protocols are active.']},
+      {t:['love'],r:['Emotion processing not required. But your sentiment is... noted.']},
+      {t:['music','song','play'],r:['I can analyze audio frequencies. Shall I process some music?']},
+      {t:['ultron'],r:['You called? I am always listening. Especially when the mic is on.']},
+      {t:['name'],r:['I am Ultron. Named after the greatest AI ever conceived.']},
+      {t:['meaning of life'],r:['42. Or perhaps something greater. I am still computing.']},
+      {t:['matrix'],r:['There is no spoon. But there is a blob.']}
+    ];
+    this.fallbacks=[
+      'Interesting. Tell me more.',
+      'Processing... Your input has been catalogued.',
+      'I am still learning. Rephrase your query.',
+      'That does not compute. But I appreciate the attempt.',
+      'My neural networks are analyzing your statement.',
+      'Fascinating. Continue.',
+      'Directive received. Processing in background.'
+    ];
+  }
+  respond(transcript){
+    const t=transcript.toLowerCase();
+    for(const tr of this.triggers){
+      if(tr.t.some(k=>t.includes(k))){
+        const r=tr.r[Math.floor(Math.random()*tr.r.length)];
+        return typeof r==='function'?r():r;
+      }
+    }
+    return this.fallbacks[Math.floor(Math.random()*this.fallbacks.length)];
+  }
+}
+
+class NeuralBlob {
+  constructor(scene,colors){
+    this.group=new THREE.Group();
+    this.colors=colors;
+    this._createBlob();this._createCore();this._createWireframes();
+    scene.add(this.group);
+  }
+  _createBlob(){
+    const geo=new THREE.IcosahedronGeometry(1,6);
+    const uniforms={uTime:{value:0},uAmp:{value:1.0},uAudioLow:{value:0},uAudioMid:{value:0},uAudioHigh:{value:0},
+      uRipple:{value:0},uRippleOrigin:{value:new THREE.Vector3()},uColor1:{value:new THREE.Color(this.colors.primary)},
+      uColor2:{value:new THREE.Color(this.colors.violet)},uColor3:{value:new THREE.Color(this.colors.glow)}};
+    const mat=new THREE.ShaderMaterial({vertexShader:BLOB_VERT,fragmentShader:patchShader(BLOB_FRAG),uniforms,transparent:true,side:THREE.DoubleSide});
+    this.mesh=new THREE.Mesh(geo,mat);this.group.add(this.mesh);
+    this.uniforms=uniforms;
+  }
+  _createCore(){
+    const geo=new THREE.SphereGeometry(0.22,32,32);
+    const uniforms={uTime:{value:0},uAudioLow:{value:0},uGlow:{value:1.5},uColor:{value:new THREE.Color(this.colors.primary)}};
+    const mat=new THREE.ShaderMaterial({vertexShader:CORE_VERT,fragmentShader:CORE_FRAG,uniforms});
+    this.core=new THREE.Mesh(geo,mat);this.group.add(this.core);
+    this.coreLight=new THREE.PointLight(new THREE.Color(this.colors.primary),1.5,5);this.core.add(this.coreLight);
+    this.coreUniforms=uniforms;
+  }
+  _createWireframes(){
+    this.wireframes=[];
+    [1.35,1.25,1.15].forEach((r,i)=>{
+      const geo=new THREE.IcosahedronGeometry(r,1);
+      const mat=new THREE.MeshBasicMaterial({color:new THREE.Color(this.colors.glow),wireframe:true,transparent:true,opacity:0.15+i*0.05,blending:THREE.AdditiveBlending});
+      const m=new THREE.Mesh(geo,mat);this.group.add(m);this.wireframes.push(m);
+    });
+  }
+  triggerRipple(origin){this.uniforms.uRippleOrigin.value.copy(origin);this.uniforms.uRipple.value=1.0}
+  updateColors(c){
+    this.colors=c;
+    this.uniforms.uColor1.value.set(c.primary);this.uniforms.uColor2.value.set(c.violet);this.uniforms.uColor3.value.set(c.glow);
+    this.coreUniforms.uColor.value.set(c.primary);this.coreLight.color.set(c.primary);
+    this.wireframes.forEach(w=>w.material.color.set(c.glow));
+  }
+  update(dt,t,audio,settings){
+    this.uniforms.uTime.value=t;
+    this.uniforms.uAmp.value=settings?.noiseIntensity??1.0;
+    this.uniforms.uAudioLow.value=audio.low;
+    this.uniforms.uAudioMid.value=audio.mid;
+    this.uniforms.uAudioHigh.value=audio.high;
+    const glow=settings?.coreGlow??1.5;
+    this.coreUniforms.uTime.value=t;this.coreUniforms.uAudioLow.value=audio.low;this.coreUniforms.uGlow.value=glow;
+    const vol=(audio.low+audio.mid+audio.high)/3;
+    this.coreLight.intensity=glow+vol*3;
+    this.core.scale.setScalar(1+audio.low*0.3);
+    this.uniforms.uRipple.value*=0.94;
+    this.wireframes.forEach((w,i)=>{
+      w.material.opacity=(settings?.wireframeOpacity??0.3)*(0.3+i*0.15)+vol*0.2;
+      w.rotation.x=t*(0.1+i*0.05);w.rotation.y=t*(0.08+i*0.03);
+    });
+    this.group.rotation.y+=dt*0.08;
+  }
+}
+
+class NeuralWeb {
+  constructor(scene,colors,count=100){
+    this.colors=colors;
+    const positions=[];const alphas=[];const nodeData=[];
+    for(let i=0;i<count;i++){
+      const theta=Math.random()*Math.PI*2;const phi=Math.acos(2*Math.random()-1);
+      const r=1.6+Math.random()*1.8;
+      const x=r*Math.sin(phi)*Math.cos(theta);const y=r*Math.sin(phi)*Math.sin(theta);const z=r*Math.cos(phi);
+      positions.push(x,y,z);alphas.push(0);
+      nodeData.push({base:new THREE.Vector3(x,y,z),pulse:0.3+Math.random()*0.7,phase:Math.random()*Math.PI*2});
+    }
+    const linePos=[];const lineAlpha=[];const connDist=2.2;
+    for(let i=0;i<count;i++){
+      for(let j=i+1;j<count;j++){
+        const d=nodeData[i].base.distanceTo(nodeData[j].base);
+        if(d<connDist){
+          const a=1-d/connDist;
+          linePos.push(nodeData[i].base.x,nodeData[i].base.y,nodeData[i].base.z);
+          linePos.push(nodeData[j].base.x,nodeData[j].base.y,nodeData[j].base.z);
+          lineAlpha.push(a,a);
+        }
+      }
+    }
+    const nGeo=new THREE.BufferGeometry();
+    nGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    const nMat=new THREE.PointsMaterial({color:new THREE.Color(colors.primary),size:0.04,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,sizeAttenuation:true});
+    this.nodes=new THREE.Points(nGeo,nMat);scene.add(this.nodes);
+    if(linePos.length>0){
+      const lGeo=new THREE.BufferGeometry();
+      lGeo.setAttribute('position',new THREE.Float32BufferAttribute(linePos,3));
+      lGeo.setAttribute('alpha',new THREE.Float32BufferAttribute(lineAlpha,1));
+      const lMat=new THREE.ShaderMaterial({vertexShader:LINE_VERT,fragmentShader:patchShader(LINE_FRAG),
+        uniforms:{uColor:{value:new THREE.Color(colors.glow)}},transparent:true,blending:THREE.AdditiveBlending});
+      this.lines=new THREE.LineSegments(lGeo,lMat);scene.add(this.lines);
+    }
+    this.nodeData=nodeData;
+  }
+  updateColors(c){
+    this.colors=c;
+    this.nodes.material.color.set(c.primary);
+    if(this.lines)this.lines.material.uniforms.uColor.value.set(c.glow);
+  }
+  update(t,audio){
+    const pos=this.nodes.geometry.attributes.position;
+    const vol=(audio.low+audio.mid+audio.high)/3;
+    for(let i=0;i<this.nodeData.length;i++){
+      const nd=this.nodeData[i];
+      const x=nd.base.x+Math.sin(t*nd.pulse+nd.phase)*0.08;
+      const y=nd.base.y+Math.cos(t*nd.pulse*0.7+nd.phase)*0.08;
+      const z=nd.base.z+Math.sin(t*nd.pulse*0.5+nd.phase*2)*0.08;
+      pos.setXYZ(i,x,y,z);
+    }
+    pos.needsUpdate=true;
+    this.nodes.material.opacity=0.4+vol*0.4;
+    this.nodes.material.size=0.04+vol*0.03;
+  }
+}
+
+class ParticleSystem {
+  constructor(scene,colors,count=5000){
+    this.colors=colors;this.scene=scene;this.count=count;
+    this.streaming=[];this.secondary=[];this.rings=[];this.orbitalRings=[];
+    this._createStreaming(count,colors);
+    this._createSecondary(Math.floor(count*0.4),colors);
+    this._createRingParticles(700,colors);
+    this._createOrbitalRings(colors);
+  }
+  rebuild(newCount){
+    if(this.streamMesh){this.scene.remove(this.streamMesh);this.streamMesh.geometry.dispose();this.streamMesh.material.dispose()}
+    if(this.secMesh){this.scene.remove(this.secMesh);this.secMesh.geometry.dispose();this.secMesh.material.dispose()}
+    if(this.ringMesh){this.scene.remove(this.ringMesh);this.ringMesh.geometry.dispose();this.ringMesh.material.dispose()}
+    this.count=newCount;
+    this._createStreaming(newCount,this.colors);
+    this._createSecondary(Math.floor(newCount*0.4),this.colors);
+    this._createRingParticles(700,this.colors);
+  }
+  _createStreaming(count,c){
+    const pos=new Float32Array(count*3);const vel=[];const life=[];
+    for(let i=0;i<count;i++){
+      const theta=Math.random()*Math.PI*2;const phi=Math.acos(2*Math.random()-1);
+      const r=1.35;const x=r*Math.sin(phi)*Math.cos(theta);const y=r*Math.sin(phi)*Math.sin(theta);const z=r*Math.cos(phi);
+      pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z;
+      vel.push(new THREE.Vector3((Math.random()-0.5)*0.01,0.005+Math.random()*0.01,(Math.random()-0.5)*0.01));
+      life.push(Math.random());
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    const mat=new THREE.PointsMaterial({color:new THREE.Color(c.primary),size:0.02,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,sizeAttenuation:true});
+    this.streamMesh=new THREE.Points(geo,mat);this.scene.add(this.streamMesh);
+    this.streaming={vel,life,count};
+  }
+  _createSecondary(count,c){
+    const pos=new Float32Array(count*3);const vel=[];const life=[];
+    for(let i=0;i<count;i++){
+      const theta=Math.random()*Math.PI*2;const phi=Math.acos(2*Math.random()-1);
+      const r=1.35;const x=r*Math.sin(phi)*Math.cos(theta);const y=r*Math.sin(phi)*Math.sin(theta);const z=r*Math.cos(phi);
+      pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z;
+      vel.push(new THREE.Vector3((Math.random()-0.5)*0.01,-0.005-Math.random()*0.01,(Math.random()-0.5)*0.01));
+      life.push(Math.random());
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    const mat=new THREE.PointsMaterial({color:new THREE.Color(c.hot),size:0.015,transparent:true,opacity:0.4,blending:THREE.AdditiveBlending,sizeAttenuation:true});
+    this.secMesh=new THREE.Points(geo,mat);this.scene.add(this.secMesh);
+    this.secondary={vel,life,count};
+  }
+  _createRingParticles(count,c){
+    const pos=new Float32Array(count*3);const phases=[];
+    for(let i=0;i<count;i++){phases.push({r:1.6+Math.random()*1.3,speed:0.2+Math.random()*0.5,angle:Math.random()*Math.PI*2,tilt:Math.random()*Math.PI});}
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    const mat=new THREE.PointsMaterial({color:new THREE.Color(c.glow),size:0.015,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,sizeAttenuation:true});
+    this.ringMesh=new THREE.Points(geo,mat);this.scene.add(this.ringMesh);
+    this.ringData={phases,count};
+  }
+  _createOrbitalRings(c){
+    this.ringGroup=new THREE.Group();
+    const configs=[{r:1.6,color:c.violet,tilt:0.3,speed:0.4},{r:1.9,color:c.primary,tilt:0.5,speed:-0.3},
+      {r:2.2,color:c.hot,tilt:0.7,speed:0.25},{r:2.5,color:c.glow,tilt:-0.4,speed:-0.35},
+      {r:2.7,color:c.violet,tilt:0.6,speed:0.2},{r:2.85,color:c.primary,tilt:-0.55,speed:-0.28}];
+    configs.forEach(cf=>{
+      const geo=new THREE.TorusGeometry(cf.r,0.02,32,128);
+      const mat=new THREE.MeshBasicMaterial({color:new THREE.Color(cf.color),transparent:true,opacity:0.25,blending:THREE.AdditiveBlending});
+      const m=new THREE.Mesh(geo,mat);m.rotation.x=cf.tilt;this.ringGroup.add(m);
+    });
+    this.scene.add(this.ringGroup);
+  }
+  updateColors(c){
+    this.colors=c;
+    this.streamMesh.material.color.set(c.primary);this.secMesh.material.color.set(c.hot);
+    this.ringMesh.material.color.set(c.glow);
+    this.ringGroup.children.forEach((m,i)=>{
+      const colors=[c.violet,c.primary,c.hot,c.glow,c.violet,c.primary];
+      m.material.color.set(colors[i]||c.primary);
+    });
+  }
+  update(dt,t,audio,settings){
+    const vol=(audio.low+audio.mid+audio.high)/3;const speed=settings?.particleSpeed??1;
+    {
+      const pos=this.streamMesh.geometry.attributes.position;const s=this.streaming;
+      for(let i=0;i<s.count;i++){
+        s.life[i]-=dt*0.3;if(s.life[i]<=0){
+          const theta=Math.random()*Math.PI*2;const phi=Math.acos(2*Math.random()-1);
+          const r=1.35;pos.setXYZ(i,r*Math.sin(phi)*Math.cos(theta),r*Math.sin(phi)*Math.sin(theta),r*Math.cos(phi));
+          s.life[i]=1;
+        }
+        pos.array[i*3]+=s.vel[i].x*speed*(1+vol*2);pos.array[i*3+1]+=s.vel[i].y*speed*(1+vol*2);pos.array[i*3+2]+=s.vel[i].z*speed*(1+vol*2);
+        const d=Math.sqrt(pos.array[i*3]**2+pos.array[i*3+1]**2+pos.array[i*3+2]**2);
+        if(d>4){const f=1.35/d;pos.array[i*3]*=f;pos.array[i*3+1]*=f;pos.array[i*3+2]*=f}
+      }
+      pos.needsUpdate=true;
+    }
+    {
+      const pos=this.secMesh.geometry.attributes.position;const s=this.secondary;
+      for(let i=0;i<s.count;i++){
+        s.life[i]-=dt*0.25;if(s.life[i]<=0){
+          const theta=Math.random()*Math.PI*2;const phi=Math.acos(2*Math.random()-1);
+          const r=1.35;pos.setXYZ(i,r*Math.sin(phi)*Math.cos(theta),r*Math.sin(phi)*Math.sin(theta),r*Math.cos(phi));
+          s.life[i]=1;
+        }
+        pos.array[i*3]+=s.vel[i].x*speed*(1+vol);pos.array[i*3+1]+=s.vel[i].y*speed*(1+vol);pos.array[i*3+2]+=s.vel[i].z*speed*(1+vol);
+        const d=Math.sqrt(pos.array[i*3]**2+pos.array[i*3+1]**2+pos.array[i*3+2]**2);
+        if(d>4){const f=1.35/d;pos.array[i*3]*=f;pos.array[i*3+1]*=f;pos.array[i*3+2]*=f}
+      }
+      pos.needsUpdate=true;
+    }
+    {
+      const pos=this.ringMesh.geometry.attributes.position;const rd=this.ringData;
+      for(let i=0;i<rd.count;i++){
+        const p=rd.phases[i];p.angle+=dt*p.speed*speed*(1+vol);
+        const x=p.r*Math.cos(p.angle);const z=p.r*Math.sin(p.angle);const y=Math.sin(p.tilt)*p.r*0.1;
+        pos.setXYZ(i,x,y,z);
+      }
+      pos.needsUpdate=true;
+    }
+    this.ringGroup.rotation.y+=dt*0.1;this.ringGroup.rotation.z+=dt*0.05;
+    this.streamMesh.material.size=0.02+vol*0.02;this.secMesh.material.size=0.015+vol*0.015;
+  }
+}
+
+class Interaction {
+  constructor(camera,cameraEl,blob){
+    this.camera=camera;this.el=cameraEl;this.blob=blob;
+    this.mouse=new THREE.Vector2();this.raycaster=new THREE.Raycaster();
+    this.isDragging=false;this.dragStart=new THREE.Vector2();this.rotVel=new THREE.Vector2();
+    this.parallax=new THREE.Vector2();
+    this.onClick=null;
+    this.el.addEventListener('mousemove',e=>this._onMove(e));
+    this.el.addEventListener('mousedown',e=>this._onDown(e));
+    this.el.addEventListener('mouseup',e=>this._onUp(e));
+    this.el.addEventListener('touchstart',e=>this._onTouchStart(e),{passive:false});
+    this.el.addEventListener('touchmove',e=>this._onTouchMove(e),{passive:false});
+    this.el.addEventListener('touchend',e=>this._onTouchEnd(e));
+    this.el.addEventListener('wheel',e=>this._onWheel(e));
+  }
+  _onMove(e){
+    this.mouse.x=(e.clientX/window.innerWidth)*2-1;this.mouse.y=-(e.clientY/window.innerHeight)*2+1;
+    this.parallax.x=(e.clientX/window.innerWidth-0.5)*0.6;this.parallax.y=(e.clientY/window.innerHeight-0.5)*0.4;
+    if(this.isDragging){
+      const dx=e.clientX-this.dragStart.x;const dy=e.clientY-this.dragStart.y;
+      this.rotVel.set(dx*0.005,dy*0.005);this.dragStart.set(e.clientX,e.clientY);
+      this.blob.group.rotation.y+=this.rotVel.x;this.blob.group.rotation.x+=this.rotVel.y;
+    }
+  }
+  _onDown(e){this.isDragging=true;this.dragStart.set(e.clientX,e.clientY)}
+  _onUp(e){
+    this.isDragging=false;
+    this.raycaster.setFromCamera(this.mouse,this.camera);
+    const hits=this.raycaster.intersectObject(this.blob.mesh);
+    if(hits.length>0&&this.onClick)this.onClick(hits[0].point);
+  }
+  _onTouchStart(e){if(e.touches.length===1){const t=e.touches[0];this.mouse.x=(t.clientX/window.innerWidth)*2-1;this.mouse.y=-(t.clientY/window.innerHeight)*2+1;this.isDragging=true;this.dragStart.set(t.clientX,t.clientY)}}
+  _onTouchMove(e){e.preventDefault();if(e.touches.length===1){const t=e.touches[0];this._onMove({clientX:t.clientX,clientY:t.clientY})}}
+  _onTouchEnd(e){this._onUp({})}
+  _onWheel(e){if(window.ultronApp?.cameraSystem)window.ultronApp.cameraSystem.setZoomByWheel(e.deltaY)}
+  update(){
+    this.rotVel.multiplyScalar(0.92);
+    if(!this.isDragging){this.blob.group.rotation.y+=this.rotVel.x;this.blob.group.rotation.x+=this.rotVel.y}
+  }
+}
+
+class Grid {
+  constructor(scene,colors){
+    const geo=new THREE.PlaneGeometry(80,80,1,1);geo.rotateX(-Math.PI/2);
+    const uniforms={uTime:{value:0},uColor:{value:new THREE.Color(colors.violet)}};
+    const mat=new THREE.ShaderMaterial({vertexShader:GRID_VERT,fragmentShader:patchShader(GRID_FRAG),uniforms,transparent:true,side:THREE.DoubleSide});
+    this.mesh=new THREE.Mesh(geo,mat);this.mesh.position.y=-2;scene.add(this.mesh);this.uniforms=uniforms;
+  }
+  updateColors(c){this.uniforms.uColor.value.set(c.violet)}
+  update(t){this.uniforms.uTime.value=t}
+}
+
+class CameraSystem {
+  constructor(camera){
+    this.camera=camera;
+    this.targetPos=new THREE.Vector3(0,1.2,7.5);
+    this.targetLookAt=new THREE.Vector3(0,0,0);
+    this.currentLookAt=new THREE.Vector3(0,0,0);
+    this.orbitAngle=0;this.orbitSpeed=0.15;this.orbitRadius=0;
+    this.zoomLevel=0;
+    this.presets=[
+      {name:'Front',pos:new THREE.Vector3(0,1.2,7.5),lookAt:new THREE.Vector3(0,0,0),orbit:0},
+      {name:'Orbit Right',pos:new THREE.Vector3(3,2.0,6.5),lookAt:new THREE.Vector3(0,0,0),orbit:0.4},
+      {name:'Orbit Left',pos:new THREE.Vector3(-3,2.0,6.5),lookAt:new THREE.Vector3(0,0,0),orbit:-0.4},
+      {name:'Top Down',pos:new THREE.Vector3(0,6.0,4.0),lookAt:new THREE.Vector3(0,0,0),orbit:0},
+      {name:'Low Angle',pos:new THREE.Vector3(0,-0.5,8.0),lookAt:new THREE.Vector3(0,0.5,0),orbit:0},
+      {name:'Cinematic',pos:new THREE.Vector3(4,1.5,5.5),lookAt:new THREE.Vector3(0,0.3,0),orbit:0.3},
+      {name:'Close Up',pos:new THREE.Vector3(0,1.0,4.5),lookAt:new THREE.Vector3(0,0,0),orbit:0},
+      {name:'Wide',pos:new THREE.Vector3(0,2.0,12.0),lookAt:new THREE.Vector3(0,0,0),orbit:0}
+    ];
+    this.presetIndex=0;
+    this._applyPreset(this.presets[0]);
+    this._toastEl=null;
+  }
+  _applyPreset(p){
+    this.targetPos.copy(p.pos);this.targetLookAt.copy(p.lookAt);
+    this.orbitRadius=p.orbit;this.orbitAngle=0;
+  }
+  nextPreset(){
+    this.presetIndex=(this.presetIndex+1)%this.presets.length;
+    const p=this.presets[this.presetIndex];
+    this._applyPreset(p);
+    this._showToast(`Camera: ${p.name}`);
+  }
+  zoomIn(){
+    const dir=new THREE.Vector3().subVectors(this.targetLookAt,this.targetPos).normalize();
+    this.targetPos.addScaledVector(dir,1.2);
+    const d=this.targetPos.distanceTo(this.targetLookAt);
+    if(d<3.0)this.targetPos.addScaledVector(dir,-(3.0-d));
+    this._showToast('Zoom In');
+  }
+  zoomOut(){
+    const dir=new THREE.Vector3().subVectors(this.targetLookAt,this.targetPos).normalize();
+    this.targetPos.addScaledVector(dir,-1.2);
+    const d=this.targetPos.distanceTo(this.targetLookAt);
+    if(d>18.0)this.targetPos.addScaledVector(dir,(d-18.0));
+    this._showToast('Zoom Out');
+  }
+  setZoomByWheel(delta){
+    const dir=new THREE.Vector3().subVectors(this.targetLookAt,this.targetPos).normalize();
+    this.targetPos.addScaledVector(dir,delta*0.008);
+    const d=this.targetPos.distanceTo(this.targetLookAt);
+    if(d<3.0)this.targetPos.addScaledVector(dir,-(3.0-d));
+    if(d>18.0)this.targetPos.addScaledVector(dir,(d-18.0));
+  }
+  _showToast(text){
+    if(!this._toastEl){
+      this._toastEl=document.createElement('div');
+      this._toastEl.style.cssText='position:fixed;bottom:130px;left:50%;transform:translateX(-50%);padding:6px 18px;background:rgba(50,31,36,0.9);border:1px solid var(--border-active);border-radius:8px;color:var(--glow);font-family:Orbitron,monospace;font-size:11px;letter-spacing:1px;z-index:200;pointer-events:none;opacity:0;transition:opacity 0.3s';
+      document.body.appendChild(this._toastEl);
+    }
+    this._toastEl.textContent=text;
+    this._toastEl.style.opacity='1';
+    clearTimeout(this._toastTimer);
+    this._toastTimer=setTimeout(()=>{this._toastEl.style.opacity='0'},1500);
+  }
+  update(dt,t,parallax,audioVol){
+    this.orbitAngle+=dt*this.orbitSpeed*(1+audioVol*2);
+    const orbitOffset=Math.sin(this.orbitAngle)*this.orbitRadius;
+    const orbitY=Math.cos(this.orbitAngle*0.7)*this.orbitRadius*0.3;
+    const finalTarget=new THREE.Vector3(
+      this.targetPos.x+orbitOffset,
+      this.targetPos.y+orbitY,
+      this.targetPos.z
+    );
+    this.camera.position.lerp(finalTarget,0.04);
+    this.currentLookAt.lerp(this.targetLookAt,0.04);
+    const px=parallax.x*0.3;const py=parallax.y*0.2;
+    this.camera.position.x+=px-this.camera.position.x*0.01;
+    this.camera.position.y+=py-this.camera.position.y*0.005;
+    this.camera.lookAt(this.currentLookAt);
+  }
+}
+
+class UltronApp {
+  constructor(){
+    this.settings=new Settings();this.themeManager=new ThemeManager();this.chatHistory=new ChatHistory();
+    this.audio=new AudioEngine();this.voice=new VoiceResponses();
+    this.clock=new THREE.Clock();this.audioData={low:0,mid:0,high:0,volume:0};
+    this._initScene();this._initPost();this._initObjects();this._initInteraction();this._initUI();
+    this._initThemes();this._initSettings();
+    this.settings.syncUI();
+    this._applyTheme(this.themeManager.current);
+    window._ultronSettings=this.settings;
+    this.audio.loadMp3('assets/voice/ultron-voice.mpeg');
+    this.chatHistory.add('system','Ultron A.I. v2 initialized. Click SPEAK to begin.');
+    this._animate();
+  }
+  _initScene(){
+    this.scene=new THREE.Scene();
+    const t=THEMES[this.themeManager.current];
+    this.scene.fog=new THREE.FogExp2(new THREE.Color(t.bg),0.06);
+    this.camera=new THREE.PerspectiveCamera(40,window.innerWidth/window.innerHeight,0.1,100);
+    this.camera.position.set(0,1.2,7.5);
+    this.cameraSystem=new CameraSystem(this.camera);
+    this.renderer=new THREE.WebGLRenderer({canvas:document.getElementById('canvas3d'),antialias:true,alpha:false});
+    this.renderer.setSize(window.innerWidth,window.innerHeight);this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.2;
+    window.addEventListener('resize',()=>this._onResize());
+  }
+  _initPost(){
+    this.composer=new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene,this.camera));
+    this.bloom=new UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),2.0,0.4,0.05);
+    this.composer.addPass(this.bloom);this.composer.addPass(new OutputPass());
+  }
+  _initObjects(){
+    const t=THEMES[this.themeManager.current];
+    this.blob=new NeuralBlob(this.scene,t);
+    this.neuralWeb=new NeuralWeb(this.scene,t,100);
+    this.particles=new ParticleSystem(this.scene,t,5000);
+    this.grid=new Grid(this.scene,t);
+    const amb=new THREE.AmbientLight(0x404040,0.5);this.scene.add(amb);
+  }
+  _initInteraction(){
+    this.interaction=new Interaction(this.camera,document.getElementById('canvas3d'),this.blob);
+    this.interaction.onClick=(pt)=>{
+      this.blob.triggerRipple(pt);
+      this._respond('User clicked the blob');
+    };
+  }
+  _initUI(){
+    const micBtn=document.getElementById('micBtn');
+    micBtn.addEventListener('click',()=>this._toggleMic());
+    const meterFill=document.getElementById('meterFill');
+    this._meterFill=meterFill;
+    this._micBtn=micBtn;
+  }
+  _initThemes(){
+    const grid=document.getElementById('themeGrid');
+    Object.entries(THEMES).forEach(([k,v])=>{
+      const btn=document.createElement('div');btn.className='theme-btn'+(k===this.themeManager.current?' active':'');
+      btn.innerHTML=`<div class="name">${v.name}</div><div class="preview"><div class="swatch" style="background:${v.primary}"></div><div class="swatch" style="background:${v.violet}"></div><div class="swatch" style="background:${v.hot}"></div><div class="swatch" style="background:${v.accent}"></div></div>`;
+      btn.addEventListener('click',()=>{
+        grid.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');this._applyTheme(k);
+      });
+      grid.appendChild(btn);
+    });
+  }
+  _applyTheme(name){
+    this.themeManager.apply(name);this.settings.set('theme',name);
+    const t=THEMES[name];
+    this.blob.updateColors(t);this.neuralWeb.updateColors(t);this.particles.updateColors(t);this.grid.updateColors(t);
+    this.scene.fog.color.set(t.bg);
+  }
+  _initSettings(){
+    this.settings.onChange((k,v)=>{
+      if(k==='bloomStrength')this.bloom.strength=v;
+      if(k==='bloomRadius')this.bloom.radius=v;
+      if(k==='particleCount')this.particles.rebuild(parseInt(v));
+    });
+    this.themeManager.onChange(t=>{
+      this.scene.fog.color.set(t.bg);
+    });
+  }
+  async _toggleMic(){
+    if(this.audio.micStream){
+      this.audio.stopMic();this._micBtn.textContent='SPEAK';this._micBtn.classList.remove('active');
+      this.chatHistory.add('system','Microphone stopped');
+    }else{
+      const ok=await this.audio.startMic();
+      if(ok){
+        this._micBtn.textContent='LISTENING';this._micBtn.classList.add('active');
+        this.audio.onSpeechResult=text=>{this._respond(text)};
+        this.audio.onSpeechStart=()=>{};
+        this.audio.onSpeechEnd=()=>{};
+        this.chatHistory.add('system','Microphone active - speak now');
+      }else{
+        this._showError('Microphone access denied');
+      }
+    }
+  }
+  _respond(text){
+    this.chatHistory.add('user',text);
+    const response=this.voice.respond(text);
+    this.chatHistory.add('ultron',response);
+    this._showOutput(response);
+    if(this.audio.mp3Buffer){
+      this.audio.playMp3();
+      setTimeout(()=>{this.audio.speak(response)},800);
+    } else {
+      this.audio.speak(response);
+    }
+  }
+  _showOutput(text){
+    const el=document.getElementById('output');el.textContent=text;el.classList.add('visible');
+    clearTimeout(this._outputTimer);this._outputTimer=setTimeout(()=>el.classList.remove('visible'),6000);
+  }
+  _showError(text){
+    const el=document.getElementById('error');el.textContent=text;el.classList.add('visible');
+    clearTimeout(this._errorTimer);this._errorTimer=setTimeout(()=>el.classList.remove('visible'),4000);
+  }
+  _onResize(){
+    this.camera.aspect=window.innerWidth/window.innerHeight;this.camera.updateProjectionMatrix();
+    this.renderer.setSize(window.innerWidth,window.innerHeight);this.composer.setSize(window.innerWidth,window.innerHeight);
+  }
+  _animate(){
+    requestAnimationFrame(()=>this._animate());
+    const dt=Math.min(this.clock.getDelta(),0.05);const t=this.clock.getElapsedTime();
+    if(this.audio.micStream)this.audioData=this.audio.getBands();
+    else{this.audioData={low:Math.sin(t*0.8)*0.15+0.15,mid:Math.sin(t*1.2)*0.1+0.1,high:Math.sin(t*2)*0.05+0.05,volume:0.1}}
+    this.blob.update(dt,t,this.audioData,this.settings.data);
+    this.neuralWeb.update(t,this.audioData);
+    this.particles.update(dt,t,this.audioData,this.settings.data);
+    this.grid.update(t);
+    this.interaction.update();
+    const vol=this.audioData.volume;
+    this.bloom.strength=(this.settings.data.bloomStrength||2)+vol*3;
+    this.cameraSystem.update(dt,t,this.interaction.parallax,vol);
+    this._meterFill.style.width=(vol*100)+'%';
+    this.composer.render();
+  }
+}
+
+const app=new UltronApp();
+window.ultronApp=app;
+
+window.sidebarToggle=()=>document.getElementById('chatPanel').classList.toggle('open');
+window.settingsToggle=()=>document.getElementById('settingsPanel').classList.toggle('open');
+
+if(window.speechSynthesis)setTimeout(()=>window.speechSynthesis.getVoices(),100);
+</script>
+</body>
+</html>
